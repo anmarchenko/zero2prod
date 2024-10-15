@@ -2,11 +2,11 @@ use std::net::TcpListener;
 
 #[actix_web::test]
 async fn health_check_works() {
-    let address = spawn_app();
+    let app_address = spawn_app();
     let client = reqwest::Client::new();
 
     let response = client
-        .get(format!("{}/health_check", address))
+        .get(format!("{}/health_check", app_address))
         .send()
         .await
         .expect("failed to send health check request");
@@ -15,7 +15,52 @@ async fn health_check_works() {
     assert_eq!(Some(0), response.content_length());
 }
 
-// Launch our application in the background ~somehow~
+#[actix_web::test]
+async fn subscribe_returns_200_for_valid_form() {
+    let app_address = spawn_app();
+    let client = reqwest::Client::new();
+
+    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    let response = client
+        .post(format!("{}/subscriptions", app_address))
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(body)
+        .send()
+        .await
+        .expect("failed to execute request");
+
+    assert_eq!(200, response.status().as_u16());
+}
+
+#[actix_web::test]
+async fn subscribe_returns_400_when_data_is_missing() {
+    let app_address = spawn_app();
+    let client = reqwest::Client::new();
+
+    let test_cases = vec![
+        ("name=le%20guin", "email is missing"),
+        ("email=ursula_le_guin%40gmail.com", "name is missing"),
+        ("", "everything missing"),
+    ];
+
+    for (invalid_body, error_message) in test_cases {
+        let response = client
+            .post(format!("{}/subscriptions", app_address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(invalid_body)
+            .send()
+            .await
+            .expect("failed to execute request");
+
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "Server did not return 400 when request had error: {}",
+            error_message
+        );
+    }
+}
+
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind to random port");
     let port = listener.local_addr().unwrap().port();
