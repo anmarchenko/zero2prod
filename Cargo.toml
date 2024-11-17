@@ -30,7 +30,7 @@ features = [
     "postgres",
     "uuid",
     "chrono",
-    "migrate"
+    "migrate",
 ]
 
 [dev-dependencies]
