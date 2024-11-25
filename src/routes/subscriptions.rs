@@ -1,5 +1,6 @@
 use actix_web::{web, HttpResponse, Responder};
 use chrono::Utc;
+use log::{error, info};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -10,6 +11,12 @@ pub struct FormData {
 }
 
 pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> impl Responder {
+    let request_id = Uuid::new_v4();
+    info!(
+        "request_id {} - Adding '{}' '{}' a new subscriber",
+        request_id, form.email, form.name
+    );
+
     match sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
@@ -24,7 +31,20 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> im
     .execute(pool.get_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok().finish(),
-        Err(e) => HttpResponse::InternalServerError().body(format!("{}", e)),
+        Ok(_) => {
+            info!(
+                "request_id {} - New subscriber details have been saved",
+                request_id
+            );
+
+            HttpResponse::Ok().finish()
+        }
+        Err(e) => {
+            error!(
+                "request_id {} - Failed to execute query: {:?}",
+                request_id, e
+            );
+            HttpResponse::InternalServerError().body(format!("{}", e))
+        }
     }
 }
