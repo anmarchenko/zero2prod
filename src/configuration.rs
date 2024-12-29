@@ -1,6 +1,7 @@
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use serde_aux::prelude::deserialize_number_from_string;
+use sqlx::postgres::PgConnectOptions;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
@@ -26,31 +27,16 @@ pub struct ApplicationSettings {
 }
 
 impl DatabaseSettings {
-    pub fn connection_string(&self) -> SecretString {
-        SecretString::new(
-            format!(
-                "postgres://{}:{}@{}:{}/{}",
-                self.username,
-                self.password.expose_secret(),
-                self.host,
-                self.port,
-                self.database_name
-            )
-            .into(),
-        )
+    pub fn with_db(&self) -> PgConnectOptions {
+        self.without_db().database(&self.database_name)
     }
 
-    pub fn connection_string_without_db(&self) -> SecretString {
-        SecretString::new(
-            format!(
-                "postgres://{}:{}@{}:{}",
-                self.username,
-                self.password.expose_secret(),
-                self.host,
-                self.port
-            )
-            .into(),
-        )
+    pub fn without_db(&self) -> PgConnectOptions {
+        PgConnectOptions::new()
+            .host(&self.host)
+            .username(&self.username)
+            .password(&self.password.expose_secret())
+            .port(self.port)
     }
 }
 
