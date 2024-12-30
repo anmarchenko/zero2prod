@@ -1,3 +1,4 @@
+use config::Config;
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use serde_aux::prelude::deserialize_number_from_string;
@@ -92,7 +93,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     let environment_filename = format!("{}.yaml", environment.as_str());
 
     // Init config reader
-    let settings = config::Config::builder()
+    let settings = Config::builder()
         .add_source(config::File::from(
             configuration_directory.join("base.yaml"),
         ))
