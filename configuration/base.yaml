@@ -6,3 +6,4 @@ database:
   username: postgres
   password: postgres
   database_name: newsletter
+  require_ssl: false
