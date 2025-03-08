@@ -27,10 +27,13 @@ async fn main() -> std::io::Result<()> {
         .email_client
         .sender()
         .expect("Incorrect sender email in settings");
+    let timeout = configuration.email_client.timeout();
+
     let email_client = EmailClient::new(
         configuration.email_client.base_url,
         sender_email,
         configuration.email_client.authorization_token,
+        timeout,
     );
 
     run(listener, connection_pool, email_client)?.await

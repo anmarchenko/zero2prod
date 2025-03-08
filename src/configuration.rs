@@ -1,3 +1,4 @@
+use std::time::Duration;
 use crate::domain::SubscriberEmail;
 use config::Config;
 use secrecy::{ExposeSecret, SecretString};
@@ -37,6 +38,7 @@ pub struct EmailClientSettings {
     pub base_url: String,
     pub sender_email: String,
     pub authorization_token: SecretString,
+    pub timeout_ms: u64,
 }
 
 impl DatabaseSettings {
@@ -93,6 +95,10 @@ impl TryFrom<String> for Environment {
 impl EmailClientSettings {
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
         SubscriberEmail::parse(self.sender_email.clone())
+    }
+
+    pub fn timeout(&self) -> Duration {
+        Duration::from_millis(self.timeout_ms)
     }
 }
 
