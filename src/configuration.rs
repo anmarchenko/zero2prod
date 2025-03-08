@@ -1,4 +1,3 @@
-use std::time::Duration;
 use crate::domain::SubscriberEmail;
 use config::Config;
 use secrecy::{ExposeSecret, SecretString};
@@ -6,16 +5,17 @@ use serde::Deserialize;
 use serde_aux::prelude::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::ConnectOptions;
+use std::time::Duration;
 use tracing::log::LevelFilter;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
     pub email_client: EmailClientSettings,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct DatabaseSettings {
     pub username: String,
     pub password: SecretString,
@@ -26,14 +26,14 @@ pub struct DatabaseSettings {
     pub require_ssl: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ApplicationSettings {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct EmailClientSettings {
     pub base_url: String,
     pub sender_email: String,
