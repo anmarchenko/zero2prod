@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Parameters {
-    subscrption_token: String,
+    subscription_token: String,
 }
 
 #[tracing::instrument(name = "Confirm a pending subscriber", skip(_parameters))]
