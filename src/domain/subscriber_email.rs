@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use validator::ValidateEmail;
 
 #[derive(Debug)]
@@ -18,6 +19,13 @@ impl AsRef<str> for SubscriberEmail {
         &self.0
     }
 }
+
+impl Display for SubscriberEmail {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
