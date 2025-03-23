@@ -1,9 +1,14 @@
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::routes::error_chain_fmt;
+use actix_web::body::BoxBody;
+use actix_web::http::header::{HeaderMap, HeaderValue, WWW_AUTHENTICATE};
 use actix_web::http::StatusCode;
-use actix_web::{web, HttpResponse, ResponseError};
+use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::{anyhow, Context};
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use secrecy::SecretString;
 use sqlx::PgPool;
 use std::fmt::{Debug, Formatter};
 
@@ -21,6 +26,8 @@ pub struct Content {
 
 #[derive(thiserror::Error)]
 pub enum PublishError {
+    #[error("Authentication failed")]
+    AuthError(#[source] anyhow::Error),
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
 }
@@ -32,9 +39,21 @@ impl Debug for PublishError {
 }
 
 impl ResponseError for PublishError {
-    fn status_code(&self) -> StatusCode {
+    fn error_response(&self) -> HttpResponse {
         match self {
-            PublishError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            PublishError::AuthError(_) => {
+                let mut response = HttpResponse::new(StatusCode::UNAUTHORIZED);
+                let header_value = HeaderValue::from_str(r#"Basic realm="publish""#).unwrap();
+
+                response
+                    .headers_mut()
+                    .insert(WWW_AUTHENTICATE, header_value);
+
+                response
+            }
+            PublishError::UnexpectedError(_) => {
+                HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR)
+            }
         }
     }
 }
@@ -44,7 +63,10 @@ pub async fn publish_newsletter(
     body: web::Json<BodyData>,
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
+    http_request: HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
+    let _credentials =
+        basic_authentication(http_request.headers()).map_err(PublishError::AuthError)?;
     let subscribers = get_confirmed_subscribers(&pool).await?;
 
     for subscriber in subscribers {
@@ -96,4 +118,43 @@ async fn get_confirmed_subscribers(
     .collect();
 
     Ok(confirmed_subscribers)
+}
+
+struct Credentials {
+    username: String,
+    password: SecretString,
+}
+
+fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Error> {
+    let header_value = headers
+        .get("Authorization")
+        .context("Missing Authorization header")?
+        .to_str()
+        .context("Authorization header is not valid UTF-8")?;
+
+    let base64_encoded = header_value
+        .strip_prefix("Basic ")
+        .context("The authorization scheme was not 'Basic'")?;
+
+    let decoded_bytes = STANDARD
+        .decode(base64_encoded)
+        .context("Failed to decode authorization header from base64")?;
+
+    let decoded_string =
+        String::from_utf8(decoded_bytes).context("The credentials is not valid UTF-8 string")?;
+
+    let mut credentials = decoded_string.splitn(2, ":");
+    let username = credentials
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Missing username"))?
+        .to_string();
+    let password = credentials
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Missing password"))?
+        .to_string();
+
+    Ok(Credentials {
+        username,
+        password: SecretString::new(Box::from(password)),
+    })
 }

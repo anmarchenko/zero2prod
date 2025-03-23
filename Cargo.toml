@@ -31,6 +31,7 @@ validator = { version = "0.19" }
 rand = { version = "0", features = ["std_rng"] }
 thiserror = "2"
 anyhow = "1"
+base64 = "0.22"
 
 # Using table-like toml syntax to avoid a super-long line!
 [dependencies.sqlx]
