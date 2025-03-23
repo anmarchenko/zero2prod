@@ -1,16 +1,16 @@
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::routes::error_chain_fmt;
-use actix_web::body::BoxBody;
 use actix_web::http::header::{HeaderMap, HeaderValue, WWW_AUTHENTICATE};
 use actix_web::http::StatusCode;
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::{anyhow, Context};
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::PgPool;
 use std::fmt::{Debug, Formatter};
+use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 pub struct BodyData {
@@ -65,8 +65,13 @@ pub async fn publish_newsletter(
     email_client: web::Data<EmailClient>,
     http_request: HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
-    let _credentials =
+    let credentials =
         basic_authentication(http_request.headers()).map_err(PublishError::AuthError)?;
+    tracing::Span::current().record("username", tracing::field::display(&credentials.username));
+
+    let user_id = validate_credentials(credentials, &pool).await?;
+    tracing::Span::current().record("user_id", tracing::field::display(&user_id));
+
     let subscribers = get_confirmed_subscribers(&pool).await?;
 
     for subscriber in subscribers {
@@ -157,4 +162,28 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
         username,
         password: SecretString::new(Box::from(password)),
     })
+}
+
+async fn validate_credentials(
+    credentials: Credentials,
+    pool: &PgPool,
+) -> Result<Uuid, PublishError> {
+    let user_id: Option<_> = sqlx::query!(
+        r#"
+            SELECT user_id
+            FROM users
+            WHERE username = $1 AND password = $2
+        "#,
+        credentials.username,
+        credentials.password.expose_secret()
+    )
+    .fetch_optional(pool)
+    .await
+    .context("Failed to run query to validate credentials")
+    .map_err(PublishError::UnexpectedError)?;
+
+    user_id
+        .map(|row| row.user_id)
+        .ok_or_else(|| anyhow::anyhow!("Invalid username or password"))
+        .map_err(PublishError::AuthError)
 }
