@@ -201,7 +201,7 @@ mod tests {
 
         let response = ResponseTemplate::new(200)
             // 3 minutes!
-            .set_delay(std::time::Duration::from_secs(180));
+            .set_delay(Duration::from_secs(180));
 
         Mock::given(any())
             .respond_with(response)
