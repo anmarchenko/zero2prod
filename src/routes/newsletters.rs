@@ -1,6 +1,7 @@
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::routes::error_chain_fmt;
+use crate::telemetry::spawn_blocking_with_tracing;
 use actix_web::http::header::{HeaderMap, HeaderValue, WWW_AUTHENTICATE};
 use actix_web::http::StatusCode;
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
@@ -175,19 +176,14 @@ async fn validate_credentials(
         .map_err(PublishError::UnexpectedError)?
         .ok_or_else(|| PublishError::AuthError(anyhow::anyhow!("Invalid username or password")))?;
 
-    let expected_password_hash = PasswordHash::new(expected_password_hash.expose_secret())
-        .context("Invalid password hash")
-        .map_err(PublishError::UnexpectedError)?;
-
-    tracing::info_span!("Verify password hash")
-        .in_scope(|| {
-            Argon2::default().verify_password(
-                credentials.password.expose_secret().as_bytes(),
-                &expected_password_hash,
-            )
-        })
-        .context("Invalid username or password")
-        .map_err(PublishError::AuthError)?;
+    spawn_blocking_with_tracing(move || {
+        verify_password_hash(expected_password_hash, credentials.password)
+    })
+    .await
+    .context("Failed to spawn blocking task")
+    .map_err(PublishError::UnexpectedError)?
+    .context("Invalid username or password")
+    .map_err(PublishError::AuthError)?;
 
     Ok(user_id)
 }
@@ -211,4 +207,25 @@ async fn get_stored_credentials(
     .map(|row| (row.user_id, SecretString::from(row.password_hash)));
 
     Ok(row)
+}
+
+#[tracing::instrument(
+    name = "Verify password hash",
+    skip(expected_password_hash, password_candidate)
+)]
+fn verify_password_hash(
+    expected_password_hash: SecretString,
+    password_candidate: SecretString,
+) -> Result<(), PublishError> {
+    let expected_password_hash = PasswordHash::new(expected_password_hash.expose_secret())
+        .context("Failed to parse hash in PHC string format.")
+        .map_err(PublishError::UnexpectedError)?;
+
+    Argon2::default()
+        .verify_password(
+            password_candidate.expose_secret().as_bytes(),
+            &expected_password_hash,
+        )
+        .context("Invalid password.")
+        .map_err(PublishError::AuthError)
 }
