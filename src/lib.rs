@@ -5,4 +5,5 @@ pub mod startup;
 
 pub mod telemetry;
 
+pub mod authentication;
 pub mod email_client;
