@@ -2,18 +2,15 @@ use crate::authentication::{validate_credentials, AuthError, Credentials};
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::routes::error_chain_fmt;
-use crate::telemetry::spawn_blocking_with_tracing;
 use actix_web::http::header::{HeaderMap, HeaderValue, WWW_AUTHENTICATE};
 use actix_web::http::StatusCode;
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::{anyhow, Context};
-use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use secrecy::{ExposeSecret, SecretString};
+use secrecy::SecretString;
 use sqlx::PgPool;
 use std::fmt::{Debug, Formatter};
-use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 pub struct BodyData {
@@ -166,4 +163,3 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
         password: SecretString::new(Box::from(password)),
     })
 }
-

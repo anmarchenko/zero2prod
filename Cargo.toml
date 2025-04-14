@@ -33,6 +33,10 @@ thiserror = "2"
 anyhow = "1"
 base64 = "0.22"
 argon2 = { version = "0.5.3", features = ["std"] }
+urlencoding = "2.1"
+htmlescape = "0.3"
+hmac = { version = "0.12", features = ["std"] }
+sha2 = "0.10"
 
 # Using table-like toml syntax to avoid a super-long line!
 [dependencies.sqlx]
