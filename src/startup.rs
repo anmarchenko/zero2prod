@@ -4,7 +4,9 @@ use crate::routes::{
     confirm, health_check, home, login, login_form, publish_newsletter, subscribe,
 };
 use actix_web::dev::Server;
+use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
+use secrecy::SecretString;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::io::Error;
@@ -23,6 +25,7 @@ pub fn run(
     db_pool: PgPool,
     email_client: EmailClient,
     base_url: String,
+    hmac_secret: SecretString,
 ) -> Result<Server, Error> {
     // wrap connection in a smart pointer (Arc)
     let db_pool = web::Data::new(db_pool);
@@ -41,6 +44,7 @@ pub fn run(
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
+            .app_data(Data::new(HmacSecret(hmac_secret.clone())))
     })
     .listen(listener)?
     .run();
@@ -75,6 +79,7 @@ impl Application {
             connection_pool,
             email_client,
             configuration.application.base_url.clone(),
+            configuration.application.hmac_secret.clone(),
         )?;
 
         Ok(Self { port, server })
@@ -94,3 +99,6 @@ pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
         .acquire_timeout(std::time::Duration::from_secs(2))
         .connect_lazy_with(configuration.with_db())
 }
+
+#[derive(Clone)]
+pub struct HmacSecret(pub SecretString);

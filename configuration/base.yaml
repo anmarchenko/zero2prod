@@ -1,5 +1,6 @@
 application:
   port: 8000
+  hmac_secret: 'my-hmac-secret'
 database:
   host: 127.0.0.1
   port: 6002
@@ -8,7 +9,7 @@ database:
   database_name: newsletter
   require_ssl: false
 email_client:
-  base_url: "localhost"
-  sender_email: "test@mail.com"
-  authorization_token: "my-secret-token"
+  base_url: 'localhost'
+  sender_email: 'test@mail.com'
+  authorization_token: 'my-secret-token'
   timeout_ms: 10000
