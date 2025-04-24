@@ -1,6 +1,6 @@
 application:
   port: 8000
-  hmac_secret: 'my-hmac-secret'
+  hmac_secret: 'my-hmac-secret-secret-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long'
 database:
   host: 127.0.0.1
   port: 6002
