@@ -58,7 +58,7 @@ features = ["json", "rustls-tls", "cookies"]
 
 [dev-dependencies]
 once_cell = "1"
-claim = "0.5"
+claims = "0.8"
 fake = "3.1"
 quickcheck = "1"
 quickcheck_macros = "1"

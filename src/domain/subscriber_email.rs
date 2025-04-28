@@ -29,7 +29,7 @@ impl Display for SubscriberEmail {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use claim::assert_err;
+    use claims::assert_err;
     use fake::faker::internet::en::SafeEmail;
     use fake::rand::prelude::StdRng;
     use fake::rand::SeedableRng;
