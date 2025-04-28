@@ -1,11 +1,11 @@
 name: Zero2prod in rust - main
 
-on: [ push, pull_request ]
+on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
   SQLX_VERSION: 0.8.0
-  SQLX_FEATURES: "rustls,postgres"
+  SQLX_FEATURES: 'rustls,postgres'
   APP_USER: app
   APP_USER_PWD: secret
   APP_DB_NAME: newsletter
@@ -30,6 +30,10 @@ jobs:
         # Opens tcp port 5432 on the host and service container
         ports:
           - 6002:5432
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v4
       # This GitHub Action installs a Rust toolchain using rustup. It is designed for one-line concise usage and good defaults.

@@ -36,6 +36,7 @@ argon2 = { version = "0.5.3", features = ["std"] }
 urlencoding = "2.1"
 htmlescape = "0.3"
 actix-web-flash-messages = { version = "0.5", features = ["cookies"] }
+actix-session = { version = "0.10", features = ["redis-session"] }
 
 # Using table-like toml syntax to avoid a super-long line!
 [dependencies.sqlx]
